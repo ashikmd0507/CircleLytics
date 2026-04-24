@@ -1,260 +1,494 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-<title>Entering CircleLytics</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You've Arrived — Circlelytics</title>
+<meta name="description" content="You've reached an alternate entry point to Circlelytics.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-body {
-  margin: 0;
-  overflow: hidden;
-  font-family: 'Inter', sans-serif;
-  background: #05070f;
-  color: #e6edf3;
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:   #06060A;
+  --v1:   #7B2FFF;
+  --v2:   #A855F7;
+  --m1:   #E040FB;
+  --m2:   #FF2D9B;
+  --white:#FFFFFF;
+  --text: rgba(255,255,255,0.92);
+  --muted:rgba(255,255,255,0.36);
 }
 
-/* CANVAS */
-canvas {
-  position: fixed;
-  inset: 0;
+html, body {
+  width:100%; height:100%;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Plus Jakarta Sans', sans-serif;
+  cursor:none;
+  -webkit-font-smoothing:antialiased;
 }
 
-/* UI */
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+/* ── CURSOR ─── */
+#cur-ring {
+  position:fixed; top:0; left:0; z-index:9999; pointer-events:none;
+  width:36px; height:36px; margin:-18px 0 0 -18px;
+  border-radius:50%;
+  border:1px solid rgba(168,85,247,0.6);
+  box-shadow:0 0 12px rgba(168,85,247,0.25), inset 0 0 8px rgba(168,85,247,0.04);
+  transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1),
+             border-color 0.3s, box-shadow 0.3s;
+}
+#cur-dot {
+  position:fixed; top:0; left:0; z-index:9999; pointer-events:none;
+  width:4px; height:4px; margin:-2px 0 0 -2px;
+  border-radius:50%;
+  background:var(--v2);
+  box-shadow:0 0 10px var(--v2), 0 0 18px var(--m1);
+}
+#cur-ring.active  { transform:scale(1.9); border-color:rgba(224,64,251,0.7); box-shadow:0 0 22px rgba(224,64,251,0.35); }
+#cur-ring.click   { transform:scale(0.75); }
+
+/* ── THREE CANVAS ─── */
+#bg-canvas { position:fixed; inset:0; z-index:0; }
+
+/* ── OVERLAYS ─── */
+#vignette {
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:radial-gradient(ellipse 85% 75% at 50% 50%, transparent 20%, rgba(6,6,10,0.6) 72%, rgba(6,6,10,0.96) 100%);
+}
+#grain {
+  position:fixed; inset:0; z-index:2; pointer-events:none; opacity:0.25;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+}
+#grid {
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(168,85,247,0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.032) 1px, transparent 1px);
+  background-size:72px 72px;
+  mask-image:radial-gradient(ellipse 62% 52% at 50% 50%, rgba(0,0,0,0.9) 0%, transparent 100%);
 }
 
-.panel {
-  backdrop-filter: blur(30px);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 24px;
-  padding: 40px;
-  max-width: 520px;
-  text-align: center;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+/* Blobs */
+.blob { position:fixed; pointer-events:none; z-index:1; border-radius:50%; filter:blur(110px); }
+.b1 { width:640px; height:520px; top:-130px; left:-160px;
+      background:radial-gradient(circle, rgba(123,47,255,0.18) 0%, transparent 70%);
+      animation:bd1 22s ease-in-out infinite; }
+.b2 { width:580px; height:460px; bottom:-100px; right:-110px;
+      background:radial-gradient(circle, rgba(224,64,251,0.14) 0%, transparent 70%);
+      animation:bd2 26s ease-in-out infinite; }
+.b3 { width:360px; height:330px; top:38%; left:57%;
+      background:radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
+      animation:bd3 17s ease-in-out infinite; }
+@keyframes bd1 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(80px,65px) scale(1.12)} 70%{transform:translate(-45px,80px) scale(0.93)} }
+@keyframes bd2 { 0%,100%{transform:translate(0,0) scale(1)} 35%{transform:translate(-65px,-55px) scale(1.1)} 65%{transform:translate(40px,-25px) scale(0.91)} }
+@keyframes bd3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-48px,38px)} }
+
+/* Scan */
+.scan {
+  position:fixed; left:0; right:0; height:1px; z-index:3; pointer-events:none;
+  background:linear-gradient(90deg, transparent 0%, rgba(168,85,247,0.18) 30%, rgba(224,64,251,0.34) 50%, rgba(168,85,247,0.18) 70%, transparent 100%);
+  animation:sweep 10s linear infinite;
+}
+@keyframes sweep { 0%{top:-2px;opacity:0} 5%{opacity:1} 95%{opacity:.7} 100%{top:100vh;opacity:0} }
+
+/* ── STAGE ─── */
+#stage {
+  position:fixed; inset:0; z-index:10;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:32px 20px;
 }
 
-/* LOGO */
-.logo {
-  width: 140px;
-  margin-bottom: 20px;
-  opacity: 0.9;
+/* Chip */
+.chip {
+  display:inline-flex; align-items:center; gap:9px;
+  padding:8px 18px; border-radius:999px;
+  background:rgba(168,85,247,0.07);
+  border:1px solid rgba(168,85,247,0.17);
+  font-family:'DM Mono',monospace;
+  font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase;
+  color:rgba(168,85,247,0.85);
+  margin-bottom:44px;
+  opacity:0; transform:translateY(18px);
+  animation:up .8s cubic-bezier(.16,1,.3,1) .15s forwards;
+}
+.chip-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--v2); box-shadow:0 0 8px var(--v2), 0 0 16px var(--m1);
+  animation:blink 2.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
+
+/* Headline */
+.hl {
+  font-size:clamp(38px, 6.2vw, 84px);
+  font-weight:900;
+  line-height:1.0;
+  letter-spacing:-0.04em;
+  color:var(--white);
+  max-width:840px;
+  margin-bottom:24px;
+  opacity:0; transform:translateY(28px);
+  animation:up .95s cubic-bezier(.16,1,.3,1) .38s forwards;
+}
+.hl em {
+  font-style:normal;
+  background:linear-gradient(110deg, var(--v2) 0%, var(--m1) 45%, var(--m2) 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:shimmer 4s linear infinite;
+}
+@keyframes shimmer { 0%{background-position:0% center} 100%{background-position:200% center} }
+
+/* Sub */
+.sub {
+  font-size:clamp(14px, 1.7vw, 17px);
+  font-weight:400; color:var(--muted);
+  max-width:480px; line-height:1.78;
+  margin-bottom:56px;
+  opacity:0; transform:translateY(20px);
+  animation:up .95s cubic-bezier(.16,1,.3,1) .58s forwards;
 }
 
-/* TEXT */
-h1 {
-  font-weight: 400;
-  font-size: 1.8rem;
-  margin-bottom: 10px;
+/* Card */
+.card {
+  position:relative;
+  background:rgba(255,255,255,0.025);
+  border:1px solid rgba(255,255,255,0.065);
+  border-radius:24px;
+  padding:36px 52px;
+  backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(168,85,247,0.05),
+    0 40px 110px rgba(0,0,0,0.6),
+    0 0 90px rgba(123,47,255,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.045);
+  display:flex; flex-direction:column; align-items:center; gap:22px;
+  opacity:0; transform:translateY(28px) scale(.97);
+  animation:up 1s cubic-bezier(.16,1,.3,1) .78s forwards;
+  overflow:hidden;
+}
+.card::before {
+  content:'';
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:52%; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(168,85,247,.5), rgba(224,64,251,.5), transparent);
+}
+.card::after {
+  content:'';
+  position:absolute; inset:0; border-radius:inherit;
+  background:radial-gradient(ellipse 75% 45% at 50% 0%, rgba(168,85,247,.06) 0%, transparent 70%);
+  pointer-events:none;
 }
 
-.tagline {
-  color: #7dd3fc;
-  font-size: 0.95rem;
-  margin-bottom: 15px;
+/* CTA */
+.cta {
+  position:relative; display:inline-flex; align-items:center; gap:14px;
+  padding:17px 46px; border-radius:14px;
+  border:none; cursor:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:14px; font-weight:800; letter-spacing:0.015em;
+  color:#fff; text-decoration:none;
+  background:linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #A855F7 70%, #C026D3 100%);
+  background-size:200% auto;
+  box-shadow:
+    0 0 0 1px rgba(168,85,247,.3),
+    0 0 55px rgba(123,47,255,.38),
+    0 14px 44px rgba(80,0,180,.45);
+  transition:background-position .5s ease,
+             transform .3s cubic-bezier(.34,1.56,.64,1),
+             box-shadow .3s ease;
+  overflow:hidden;
+}
+.cta::before {
+  content:'';
+  position:absolute; inset:0; border-radius:inherit;
+  background:linear-gradient(135deg, rgba(255,255,255,.14) 0%, transparent 55%);
+}
+.cta:hover {
+  background-position:right center;
+  transform:translateY(-4px) scale(1.035);
+  box-shadow:
+    0 0 0 1px rgba(224,64,251,.55),
+    0 0 75px rgba(168,85,247,.48),
+    0 22px 64px rgba(80,0,180,.55);
+}
+.cta:active { transform:translateY(-1px) scale(.99); }
+
+.cta-icon {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:27px; height:27px; border-radius:8px;
+  background:rgba(255,255,255,.12);
+  font-size:15px;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.cta:hover .cta-icon { transform:translateX(5px); }
+
+/* Ripple */
+.rip {
+  position:absolute; border-radius:50%;
+  background:rgba(255,255,255,.18);
+  transform:scale(0); animation:rout .65s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes rout { to { transform:scale(5); opacity:0; } }
+
+/* Progress bar */
+.arc-wrap { display:flex; align-items:center; gap:10px; }
+.arc-bar { width:88px; height:2px; border-radius:2px; background:rgba(255,255,255,.05); overflow:hidden; }
+.arc-fill {
+  height:100%; width:0; border-radius:2px;
+  background:linear-gradient(90deg, var(--v2), var(--m1));
+  box-shadow:0 0 8px var(--v2);
+  animation:fill 1.2s cubic-bezier(.16,1,.3,1) 1.6s forwards;
+}
+@keyframes fill { to { width:100%; } }
+.arc-lbl {
+  font-family:'DM Mono',monospace;
+  font-size:10px; letter-spacing:.1em;
+  color:rgba(168,85,247,.5);
+  opacity:0; animation:up .5s ease 1.5s both;
 }
 
-p {
-  color: #9aa6b2;
-  line-height: 1.6;
+/* Dest */
+.dest {
+  font-family:'DM Mono',monospace;
+  font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(255,255,255,.18);
+  display:flex; align-items:center; gap:8px;
+}
+.dest-url { color:rgba(168,85,247,.5); font-weight:500; }
+
+/* Footer */
+#footer {
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
+  z-index:10; white-space:nowrap;
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.13em;
+  color:rgba(255,255,255,.13);
+  opacity:0; animation:fadeIn 1s ease 2.1s forwards;
+}
+#footer a { color:rgba(168,85,247,.3); text-decoration:none; cursor:none; transition:color .2s; }
+#footer a:hover { color:rgba(168,85,247,.65); }
+
+/* Particles */
+.pt { position:fixed; border-radius:50%; pointer-events:none; z-index:2; animation:rise linear infinite; opacity:0; }
+@keyframes rise {
+  0%   { transform:translateY(110vh) rotate(0deg) scale(.5); opacity:0; }
+  6%   { opacity:1; }
+  90%  { opacity:.5; }
+  100% { transform:translateY(-8vh) rotate(540deg) scale(1.2); opacity:0; }
 }
 
-.btn {
-  margin-top: 20px;
-  display: inline-block;
-  padding: 12px 22px;
-  border-radius: 999px;
-  background: rgba(125,211,252,0.15);
-  color: #7dd3fc;
-  text-decoration: none;
-  transition: 0.3s;
-}
+/* Shared keyframes */
+@keyframes up      { to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes fadeIn  { to { opacity:1; } }
 
-.btn:hover {
-  background: rgba(125,211,252,0.3);
-}
-
-.timer {
-  margin-top: 15px;
-  font-size: 0.9rem;
-  color: #7c8aa0;
+/* Responsive */
+@media (max-width:600px) {
+  .card { padding:26px 22px; }
+  .cta  { padding:15px 30px; font-size:13px; }
+  .hl   { letter-spacing:-0.025em; }
 }
 </style>
 </head>
-
 <body>
 
-<div class="overlay">
-  <div class="panel">
-    
-    <!-- LOGO (auto from site) -->
-    <img src="https://www.circlelytics.com/img/logo.svg" class="logo">
+<canvas id="bg-canvas"></canvas>
+<div id="grain"></div>
+<div id="vignette"></div>
+<div id="grid"></div>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+<div class="scan"></div>
+<div id="cur-ring"></div>
+<div id="cur-dot"></div>
 
-    <h1>This is an Alternate Entry Point</h1>
+<main id="stage">
+  <div class="chip"><span class="chip-dot"></span>Alternate Entry Point</div>
 
-    <div class="tagline">
-      Unlock Collective Intelligence
-    </div>
+  <h1 class="hl">You've arrived at<br><em>Circlelytics</em></h1>
 
-    <p>
-      You’ve entered CircleLytics through a secondary gateway.  
-      We’re seamlessly connecting you to the official platform  
-      where diverse perspectives converge into meaningful insight.
-    </p>
+  <p class="sub">
+    This is a secondary gateway to the Circlelytics platform.<br>
+    Everything you need is waiting on the other side.
+  </p>
 
-    <a href="https://circlelytics.com" class="btn">
-      Enter Official Platform
+  <div class="card">
+    <a class="cta" href="https://circlelytics.com" id="cta-btn">
+      Enter Circlelytics
+      <span class="cta-icon">→</span>
     </a>
-
-    <div class="timer">
-      Redirecting within few seconds
+    <div class="arc-wrap">
+      <div class="arc-bar"><div class="arc-fill"></div></div>
+      <div class="arc-lbl">circlelytics.com</div>
     </div>
+    <div class="dest">Redirects to&nbsp;<span class="dest-url">circlelytics.com</span></div>
   </div>
-</div>
+</main>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<div id="footer">Secondary domain &nbsp;·&nbsp; <a href="https://circlelytics.com">circlelytics.com</a></div>
 
 <script>
-/* SCENE */
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x05070f, 4, 12);
+/* ── CURSOR ─── */
+const ring = document.getElementById('cur-ring');
+const dot  = document.getElementById('cur-dot');
+let mx = innerWidth/2, my = innerHeight/2, rx = mx, ry = my;
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-camera.position.z = 5;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dot.style.left = mx+'px'; dot.style.top = my+'px';
+});
+document.addEventListener('mousedown', () => ring.classList.add('click'));
+document.addEventListener('mouseup',   () => ring.classList.remove('click'));
+document.querySelectorAll('a,.cta').forEach(el => {
+  el.addEventListener('mouseenter', () => ring.classList.add('active'));
+  el.addEventListener('mouseleave', () => ring.classList.remove('active'));
+});
+(function loop() {
+  rx += (mx-rx)*0.11; ry += (my-ry)*0.11;
+  ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  requestAnimationFrame(loop);
+})();
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(devicePixelRatio);
-document.body.appendChild(renderer.domElement);
-
-/* LIGHT */
-const light1 = new THREE.PointLight(0x7dd3fc, 2);
-light1.position.set(5,5,5);
-scene.add(light1);
-
-const light2 = new THREE.PointLight(0x1d4ed8, 2);
-light2.position.set(-5,-5,-5);
-scene.add(light2);
-
-/* CORE BLOB */
-const geo = new THREE.IcosahedronGeometry(1.6, 64);
-
-const mat = new THREE.MeshPhysicalMaterial({
-  color: 0x60a5fa,
-  roughness: 0.1,
-  metalness: 0.3,
-  transmission: 0.4,
-  thickness: 0.8,
-  clearcoat: 1
+/* ── RIPPLE ─── */
+document.getElementById('cta-btn').addEventListener('click', function(e) {
+  const r = this.getBoundingClientRect();
+  const s = Math.max(r.width, r.height);
+  const el = document.createElement('span');
+  el.className = 'rip';
+  el.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;
+  this.appendChild(el);
+  setTimeout(()=>el.remove(), 700);
 });
 
-const blob = new THREE.Mesh(geo, mat);
-scene.add(blob);
+/* ── PARTICLES ─── */
+const pC = ['rgba(123,47,255,','rgba(168,85,247,','rgba(224,64,251,','rgba(255,45,155,'];
+for (let i=0; i<22; i++) {
+  const p = document.createElement('div');
+  p.className = 'pt';
+  const s = Math.random()*3+1.5, c = pC[i%pC.length], op = (Math.random()*.35+.12).toFixed(2);
+  p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${c}${op});box-shadow:0 0 ${s*4}px ${c}.65);animation-duration:${Math.random()*22+14}s;animation-delay:${Math.random()*22}s`;
+  document.body.appendChild(p);
+}
 
-/* VERTEX MORPH */
-const pos = geo.attributes.position;
-const original = pos.array.slice();
+/* ── THREE.JS ─── */
+(() => {
+  const canvas   = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
 
-function animateBlob(t) {
-  for (let i = 0; i < pos.count; i++) {
-    let ix = i * 3;
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 200);
+  camera.position.z = 20;
 
-    let x = original[ix];
-    let y = original[ix+1];
-    let z = original[ix+2];
+  /* Lights */
+  scene.add(new THREE.AmbientLight(0x080020, 1.3));
 
-    let noise =
-      Math.sin(t + x*3) +
-      Math.sin(t + y*3) +
-      Math.sin(t + z*3);
+  const vL = new THREE.PointLight(0x8B5CF6, 3.8, 55);
+  vL.position.set(-10, 8, 6);
+  scene.add(vL);
 
-    noise *= 0.08;
+  const mL = new THREE.PointLight(0xE040FB, 2.8, 55);
+  mL.position.set(10, -6, 6);
+  scene.add(mL);
 
-    pos.array[ix] = x + noise;
-    pos.array[ix+1] = y + noise;
-    pos.array[ix+2] = z + noise;
+  const rL = new THREE.PointLight(0xFF2D9B, 1.4, 44);
+  rL.position.set(0, 10, -4);
+  scene.add(rL);
+
+  const meshes = [];
+  function mk(geo, col, wire, x, y, z, op=0.7, rx=0, ry=0) {
+    const mat = new THREE.MeshStandardMaterial({
+      color: col, wireframe: wire,
+      metalness: wire ? 0 : 0.88,
+      roughness: wire ? 1 : 0.1,
+      emissive: col,
+      emissiveIntensity: wire ? 0.48 : 0.07,
+      transparent: true, opacity: op,
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx, ry, 0);
+    m.userData = {
+      sx:(Math.random()-.5)*.004, sy:(Math.random()-.5)*.005, sz:(Math.random()-.5)*.003,
+      ph:Math.random()*Math.PI*2, baseY:y,
+    };
+    scene.add(m); meshes.push(m); return m;
   }
 
-  pos.needsUpdate = true;
-  geo.computeVertexNormals();
-}
+  /* Wireframe sculptures */
+  mk(new THREE.IcosahedronGeometry(2.7, 1),  0x9333EA, true, -8,   3.5, -5,  0.55);
+  mk(new THREE.IcosahedronGeometry(1.7, 0),  0xC026D3, true,  8.5, -3,  -4,  0.52);
+  mk(new THREE.IcosahedronGeometry(1.0, 0),  0x7B2FFF, true,  5.5,  5,  -7,  0.5);
+  mk(new THREE.IcosahedronGeometry(0.7, 0),  0xE040FB, true, -5,  -5.5, -3,  0.48);
 
-/* PARTICLES */
-const starsGeo = new THREE.BufferGeometry();
-const starCount = 2000;
-const arr = new Float32Array(starCount * 3);
+  /* Tori */
+  mk(new THREE.TorusGeometry(2.4, 0.05, 10, 90),  0x8B5CF6, true, -6.5, -4,  -6, 0.5, 0.4);
+  mk(new THREE.TorusGeometry(1.6, 0.04,  8, 70),  0xC026D3, true,  6.5,  3,  -7, 0.48, 0, 0.8);
+  mk(new THREE.TorusGeometry(0.9, 0.035, 7, 55),  0xA855F7, true,  3,   -6,  -4, 0.45, 1.1);
 
-for (let i = 0; i < starCount * 3; i++) {
-  arr[i] = (Math.random() - 0.5) * 20;
-}
+  /* Torus knot hero (bg) */
+  mk(new THREE.TorusKnotGeometry(1.8, 0.1, 160, 14), 0x7B2FFF, true, 0, 0, -12, 0.24);
 
-starsGeo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  /* Solid forms */
+  mk(new THREE.OctahedronGeometry(1.1, 0), 0x3B0764, false,  4.5, -5.5, -3, 0.85);
+  mk(new THREE.OctahedronGeometry(0.7, 0), 0x4A044E, false, -6.5,  4.5, -2, 0.8);
+  mk(new THREE.OctahedronGeometry(1.6, 0), 0x2E0057, false,-10,   -2,  -7, 0.7);
 
-const starsMat = new THREE.PointsMaterial({
-  color: 0x7dd3fc,
-  size: 0.015,
-  transparent: true,
-  opacity: 0.6
-});
+  /* Accent spheres */
+  const sc = [0x7B2FFF, 0xC026D3, 0xA855F7];
+  for (let i=0; i<6; i++) {
+    mk(new THREE.SphereGeometry(0.12+Math.random()*.18, 10, 10), sc[i%3], false,
+      (Math.random()-.5)*20, (Math.random()-.5)*14, (Math.random()-.5)*4-8, 0.9);
+  }
 
-const stars = new THREE.Points(starsGeo, starsMat);
-scene.add(stars);
+  /* Parallax */
+  let tx=0, ty=0, cx=0, cy=0;
+  document.addEventListener('mousemove', e => {
+    tx = (e.clientX/innerWidth  - 0.5)*3.2;
+    ty = -(e.clientY/innerHeight - 0.5)*2.4;
+  });
 
-/* INTERACTION */
-let mx = 0, my = 0;
+  const clock = new THREE.Clock();
+  (function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
 
-document.addEventListener("mousemove", e => {
-  mx = (e.clientX / innerWidth - 0.5) * 2;
-  my = (e.clientY / innerHeight - 0.5) * 2;
-});
+    cx += (tx-cx)*0.035; cy += (ty-cy)*0.035;
+    scene.rotation.y = cx*0.07;
+    scene.rotation.x = cy*0.06;
 
-/* LOOP */
-function animate(t) {
-  requestAnimationFrame(animate);
+    vL.intensity = 3.5 + Math.sin(t*0.8)*0.55;
+    mL.intensity = 2.4 + Math.sin(t*0.6+1.5)*0.5;
+    rL.intensity = 1.1 + Math.sin(t*0.4+0.8)*0.35;
 
-  animateBlob(t * 0.001);
+    meshes.forEach(m => {
+      m.rotation.x += m.userData.sx;
+      m.rotation.y += m.userData.sy;
+      m.rotation.z += m.userData.sz;
+      m.position.y = m.userData.baseY + Math.sin(t*0.38 + m.userData.ph)*0.55;
+    });
 
-  blob.rotation.y += 0.002;
-  blob.rotation.x += 0.001;
+    renderer.render(scene, camera);
+  })();
 
-  camera.position.x += (mx * 1.5 - camera.position.x) * 0.05;
-  camera.position.y += (-my * 1.5 - camera.position.y) * 0.05;
-  camera.lookAt(scene.position);
-
-  stars.rotation.y += 0.0004;
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-/* RESIZE */
-addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-
-/* REDIRECT */
-let t = 15;
-const el = document.getElementById("t");
-
-setInterval(() => {
-  t--;
-  el.textContent = t;
-  if (t <= 0) location.href = "https://circlelytics.com";
-}, 1500);
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+})();
 </script>
-
 </body>
 </html>
