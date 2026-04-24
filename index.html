@@ -3,986 +3,258 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Circlelytics — Gateway</title>
-<meta name="description" content="You've arrived at the Circlelytics gateway. The experience you're looking for lives at circlelytics.com." />
-<meta name="robots" content="noindex, follow" />
-<link rel="canonical" href="https://circlelytics.com" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+
+<title>Entering CircleLytics</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
-/* ── Reset & Base ─────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --blue: #00C8FF;
-  --blue-dim: #0096C7;
-  --blue-glow: rgba(0,200,255,0.25);
-  --orange: #FF6B2B;
-  --orange-dim: #E55A1C;
-  --orange-glow: rgba(255,107,43,0.25);
-  --bg: #040810;
-  --bg2: #060D18;
-  --surface: rgba(6,18,40,0.6);
-  --border: rgba(0,200,255,0.15);
-  --text: #E8F4FF;
-  --muted: rgba(200,225,255,0.5);
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-}
-
-html { scroll-behavior: smooth; }
-
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  min-height: 100dvh;
-  overflow-x: hidden;
-  cursor: none;
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  background: #05070f;
+  color: #e6edf3;
 }
 
-/* ── Custom Cursor ─────────────────────────────────── */
-#cursor-ring {
-  position: fixed;
-  top: 0; left: 0;
-  width: 36px; height: 36px;
-  border: 1.5px solid var(--blue);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: width 0.25s, height 0.25s, border-color 0.2s, background 0.2s;
-  mix-blend-mode: screen;
-}
-#cursor-dot {
-  position: fixed;
-  top: 0; left: 0;
-  width: 6px; height: 6px;
-  background: var(--blue);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 10000;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 10px var(--blue), 0 0 20px var(--blue);
-}
-body.hovering #cursor-ring {
-  width: 60px; height: 60px;
-  border-color: var(--orange);
-  background: rgba(255,107,43,0.07);
-}
-body.hovering #cursor-dot { background: var(--orange); box-shadow: 0 0 10px var(--orange), 0 0 20px var(--orange); }
-
-.trail {
-  position: fixed;
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--blue);
-  pointer-events: none;
-  z-index: 9998;
-  transform: translate(-50%, -50%);
-  opacity: 0.7;
-}
-
-/* ── Canvas (Three.js) ─────────────────────────────── */
-#bg-canvas {
+/* CANVAS */
+canvas {
   position: fixed;
   inset: 0;
-  z-index: 0;
-  display: block;
 }
 
-/* ── Noise Grain ───────────────────────────────────── */
-#grain {
-  position: fixed;
-  inset: -50%;
-  width: 200%; height: 200%;
-  z-index: 1;
-  opacity: 0.03;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-  animation: grain-drift 8s steps(2) infinite;
-}
-@keyframes grain-drift {
-  0%   { transform: translate(0,0); }
-  25%  { transform: translate(-1%,-1%); }
-  50%  { transform: translate(1%,1%); }
-  75%  { transform: translate(-1%,1%); }
-  100% { transform: translate(0,0); }
-}
-
-/* ── Gradient Vignette ─────────────────────────────── */
-#vignette {
-  position: fixed;
+/* UI */
+.overlay {
+  position: absolute;
   inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, rgba(4,8,16,0.7) 100%);
-}
-
-/* ── Scanline ──────────────────────────────────────── */
-#scanline {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-}
-
-/* ── Main Layout ───────────────────────────────────── */
-#scene {
-  position: relative;
-  z-index: 10;
-  min-height: 100dvh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1.5rem;
+  z-index: 10;
 }
 
-/* ── Status Bar ────────────────────────────────────── */
-#status-bar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  background: rgba(4,8,16,0.7);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.status-brand {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--blue);
-  text-shadow: 0 0 12px var(--blue-glow);
-}
-.status-indicators {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.status-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #22FF8C;
-  box-shadow: 0 0 8px #22FF8C;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-@keyframes pulse-dot {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.4; }
-}
-#live-time {
-  font-family: 'DM Sans', monospace;
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.05em;
-}
-
-/* ── Glass Card ────────────────────────────────────── */
-.glass-card {
-  position: relative;
-  width: 100%;
-  max-width: 760px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+.panel {
+  backdrop-filter: blur(30px);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 24px;
-  padding: 3.5rem 3rem;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 0 0 1px rgba(0,200,255,0.08),
-    0 30px 80px rgba(0,0,0,0.6),
-    0 0 60px rgba(0,200,255,0.05) inset;
-  transform-style: preserve-3d;
-  transition: transform 0.1s ease-out;
-  overflow: hidden;
-}
-.glass-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.4), rgba(255,107,43,0.4), transparent);
-}
-.glass-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 24px;
-  background: radial-gradient(ellipse 60% 40% at 50% -10%, rgba(0,200,255,0.06), transparent 70%);
-  pointer-events: none;
-}
-
-/* ── Eyebrow ───────────────────────────────────────── */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--blue);
-  margin-bottom: 1.5rem;
-  padding: 5px 14px;
-  border: 1px solid rgba(0,200,255,0.2);
-  border-radius: 100px;
-  background: rgba(0,200,255,0.07);
-}
-.eyebrow-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--blue);
-  box-shadow: 0 0 8px var(--blue);
-  animation: pulse-dot 1.8s ease-in-out infinite;
-}
-
-/* ── Headline ──────────────────────────────────────── */
-h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.4rem, 6vw, 4rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  margin-bottom: 1.25rem;
-  opacity: 0;
-  transform: translateY(30px);
-  animation: rise 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s forwards;
-}
-h1 .gradient-text {
-  background: linear-gradient(110deg, var(--blue) 0%, #80E8FF 40%, var(--orange) 80%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 20px rgba(0,200,255,0.3));
-}
-
-/* ── Subheadline ───────────────────────────────────── */
-.sub {
-  font-size: clamp(1rem, 2.2vw, 1.2rem);
-  font-weight: 300;
-  line-height: 1.65;
-  color: var(--muted);
-  max-width: 540px;
-  margin-bottom: 2.5rem;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: rise 0.8s cubic-bezier(0.22,1,0.36,1) 0.55s forwards;
-}
-.sub .highlight {
-  color: var(--blue);
-  font-weight: 500;
-}
-
-/* ── CTA Buttons ───────────────────────────────────── */
-.cta-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: rise 0.8s cubic-bezier(0.22,1,0.36,1) 0.75s forwards;
-}
-
-.btn-primary {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.85rem 2rem;
-  background: linear-gradient(135deg, var(--blue-dim), var(--blue));
-  border: none;
-  border-radius: 12px;
-  color: #040810;
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  cursor: none;
-  overflow: hidden;
-  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
-  box-shadow: 0 0 30px rgba(0,200,255,0.3), 0 4px 20px rgba(0,0,0,0.4);
-}
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.btn-primary:hover::before { opacity: 1; }
-.btn-primary:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 0 50px rgba(0,200,255,0.5), 0 8px 30px rgba(0,0,0,0.5);
-}
-.btn-primary:active { transform: translateY(0) scale(0.98); }
-
-.btn-secondary {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.85rem 2rem;
-  background: rgba(255,107,43,0.08);
-  border: 1px solid rgba(255,107,43,0.35);
-  border-radius: 12px;
-  color: var(--orange);
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  cursor: none;
-  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s, background 0.2s;
-}
-.btn-secondary:hover {
-  transform: translateY(-3px) scale(1.02);
-  background: rgba(255,107,43,0.15);
-  box-shadow: 0 0 30px rgba(255,107,43,0.2), 0 4px 20px rgba(0,0,0,0.3);
-  border-color: rgba(255,107,43,0.6);
-}
-.btn-secondary:active { transform: translateY(0) scale(0.98); }
-
-.btn-arrow {
-  display: inline-block;
-  transition: transform 0.2s;
-  font-size: 1.1rem;
-  line-height: 1;
-}
-.btn-primary:hover .btn-arrow,
-.btn-secondary:hover .btn-arrow { transform: translateX(4px); }
-
-/* ── Divider ───────────────────────────────────────── */
-.divider {
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent);
-  margin: 2.5rem 0;
-  opacity: 0;
-  animation: fade 1s ease 1.2s forwards;
-}
-
-/* ── Info Row ──────────────────────────────────────── */
-.info-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  opacity: 0;
-  animation: fade 0.8s ease 1.3s forwards;
-}
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
-.info-icon {
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  border: 1px solid rgba(0,200,255,0.25);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px;
-  flex-shrink: 0;
-  color: var(--blue);
-}
-
-/* ── Corner Decorations ────────────────────────────── */
-.corner {
-  position: absolute;
-  width: 20px; height: 20px;
-  border-color: rgba(0,200,255,0.3);
-  border-style: solid;
-  pointer-events: none;
-}
-.corner-tl { top: 12px; left: 12px; border-width: 1px 0 0 1px; }
-.corner-tr { top: 12px; right: 12px; border-width: 1px 1px 0 0; }
-.corner-bl { bottom: 12px; left: 12px; border-width: 0 0 1px 1px; }
-.corner-br { bottom: 12px; right: 12px; border-width: 0 1px 1px 0; }
-
-/* ── Data Stream (left side) ───────────────────────── */
-.data-stream {
-  position: absolute;
-  right: -180px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  opacity: 0;
-  animation: fade 1s ease 1.5s forwards;
-}
-.data-line {
-  height: 1px;
-  background: linear-gradient(90deg, var(--blue), transparent);
-  position: relative;
-  overflow: hidden;
-}
-.data-line::after {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%; width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.8), transparent);
-  animation: scan 3s ease-in-out infinite;
-  animation-delay: var(--d, 0s);
-}
-@keyframes scan {
-  0%   { left: -100%; }
-  100% { left: 200%; }
-}
-.data-label {
-  position: absolute;
-  left: calc(100% + 6px);
-  top: -5px;
-  font-family: monospace;
-  font-size: 9px;
-  color: rgba(0,200,255,0.4);
-  white-space: nowrap;
-  letter-spacing: 0.1em;
-}
-
-/* ── Floating Particles (CSS) ──────────────────────── */
-.particle {
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 3;
-  animation: float-particle linear infinite;
-}
-@keyframes float-particle {
-  0%   { transform: translateY(100vh) scale(0); opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 0.6; }
-  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
-}
-
-/* ── Bottom Badge ──────────────────────────────────── */
-.bottom-badge {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.06em;
+  padding: 40px;
+  max-width: 520px;
   text-align: center;
-  opacity: 0;
-  animation: fade 1s ease 2s forwards;
-}
-.bottom-badge span { color: var(--blue); font-weight: 500; }
-
-/* ── Hex Grid Overlay ──────────────────────────────── */
-#hex-grid {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zM28 100L0 84V66l28 16 28-16v18L28 100z' fill='none' stroke='%2300C8FF' stroke-width='0.5'/%3E%3C/svg%3E");
-  background-size: 56px 100px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
 }
 
-/* ── Keyframes ─────────────────────────────────────── */
-@keyframes rise {
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fade {
-  to { opacity: 1; }
-}
-
-/* ── Responsive ────────────────────────────────────── */
-@media (max-width: 640px) {
-  .glass-card { padding: 2.5rem 1.5rem; border-radius: 18px; }
-  h1 { font-size: 2rem; }
-  .cta-group { flex-direction: column; }
-  .btn-primary, .btn-secondary { justify-content: center; }
-  .data-stream { display: none; }
-  #status-bar { padding: 0 1rem; }
-  .status-indicators { gap: 0.75rem; }
-  .status-item:nth-child(3) { display: none; }
-}
-@media (max-width: 480px) {
-  .info-row { flex-direction: column; gap: 1rem; }
+/* LOGO */
+.logo {
+  width: 140px;
+  margin-bottom: 20px;
+  opacity: 0.9;
 }
 
-/* ── Reduced motion ────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+/* TEXT */
+h1 {
+  font-weight: 400;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+.tagline {
+  color: #7dd3fc;
+  font-size: 0.95rem;
+  margin-bottom: 15px;
+}
+
+p {
+  color: #9aa6b2;
+  line-height: 1.6;
+}
+
+.btn {
+  margin-top: 20px;
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(125,211,252,0.15);
+  color: #7dd3fc;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: rgba(125,211,252,0.3);
+}
+
+.timer {
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #7c8aa0;
 }
 </style>
 </head>
+
 <body>
 
-<!-- Cursor -->
-<div id="cursor-ring"></div>
-<div id="cursor-dot"></div>
+<div class="overlay">
+  <div class="panel">
+    
+    <!-- LOGO (auto from site) -->
+    <img src="https://www.circlelytics.com/img/logo.svg" class="logo">
 
-<!-- Three.js Canvas -->
-<canvas id="bg-canvas"></canvas>
+    <h1>Alternate Entry Point</h1>
 
-<!-- Overlays -->
-<div id="hex-grid"></div>
-<div id="grain"></div>
-<div id="vignette"></div>
-<div id="scanline"></div>
-
-<!-- Status Bar -->
-<header id="status-bar" aria-label="Status">
-  <div class="status-brand">Circlelytics</div>
-  <div class="status-indicators">
-    <div class="status-item">
-      <div class="status-dot"></div>
-      Gateway Active
-    </div>
-    <div class="status-item" id="live-time" aria-live="polite"></div>
-    <div class="status-item">◈ Secure</div>
-  </div>
-</header>
-
-<!-- Main Scene -->
-<main id="scene" role="main">
-  <div class="glass-card" id="card" role="region" aria-label="Gateway to Circlelytics">
-
-    <!-- Corner decorations -->
-    <div class="corner corner-tl" aria-hidden="true"></div>
-    <div class="corner corner-tr" aria-hidden="true"></div>
-    <div class="corner corner-bl" aria-hidden="true"></div>
-    <div class="corner corner-br" aria-hidden="true"></div>
-
-    <!-- Eyebrow -->
-    <div class="eyebrow" aria-label="Gateway portal indicator">
-      <span class="eyebrow-dot" aria-hidden="true"></span>
-      Gateway Portal
+    <div class="tagline">
+      Unlock Collective Intelligence
     </div>
 
-    <!-- Headline -->
-    <h1>
-      You've arrived at<br />
-      <span class="gradient-text">Circlelytics.</span>
-    </h1>
-
-    <!-- Sub -->
-    <p class="sub">
-      This is the gateway. The experience you're looking for lives at&nbsp;<span class="highlight">circlelytics.com</span>. You're one click from the platform.
+    <p>
+      You’ve entered CircleLytics through a secondary gateway.  
+      We’re seamlessly connecting you to the official platform  
+      where diverse perspectives converge into meaningful insight.
     </p>
 
-    <!-- CTAs -->
-    <nav class="cta-group" aria-label="Navigation to main platform">
-      <a href="https://circlelytics.com" class="btn-primary" id="cta-primary" aria-label="Enter Circlelytics main platform">
-        Enter Circlelytics
-        <span class="btn-arrow" aria-hidden="true">→</span>
-      </a>
-      <a href="https://circlelytics.com" class="btn-secondary" id="cta-secondary" aria-label="Go to main platform">
-        Go to Main Platform
-        <span class="btn-arrow" aria-hidden="true">→</span>
-      </a>
-    </nav>
+    <a href="https://circlelytics.com" class="btn">
+      Enter Official Platform
+    </a>
 
-    <!-- Divider -->
-    <div class="divider" aria-hidden="true"></div>
-
-    <!-- Info Row -->
-    <div class="info-row" aria-label="Gateway information">
-      <div class="info-item">
-        <div class="info-icon" aria-hidden="true">●</div>
-        Alternate domain gateway
-      </div>
-      <div class="info-item">
-        <div class="info-icon" aria-hidden="true">◈</div>
-        Redirects to circlelytics.com
-      </div>
-      <div class="info-item">
-        <div class="info-icon" aria-hidden="true">▸</div>
-        No action needed
-      </div>
-    </div>
-
-    <!-- Data stream decoration (right side) -->
-    <div class="data-stream" aria-hidden="true">
-      <div class="data-line" style="--d:0s; width:80%;"><span class="data-label">NODE_01</span></div>
-      <div class="data-line" style="--d:0.4s; width:60%;"><span class="data-label">SYNC</span></div>
-      <div class="data-line" style="--d:0.8s; width:90%;"><span class="data-label">GATEWAY</span></div>
-      <div class="data-line" style="--d:1.2s; width:50%;"><span class="data-label">ROUTE</span></div>
-      <div class="data-line" style="--d:1.6s; width:75%;"><span class="data-label">OK_200</span></div>
+    <div class="timer">
+      Redirecting within few seconds
     </div>
   </div>
-</main>
-
-<!-- Bottom -->
-<div class="bottom-badge" aria-label="Circlelytics branding">
-  Powered by <span>Circlelytics</span> · circlelytics.com
 </div>
 
-<!-- Three.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
-/* ── Utility: Lerp ─────────────────────────────────── */
-const lerp = (a, b, t) => a + (b - a) * t;
+/* SCENE */
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x05070f, 4, 12);
 
-/* ── Live Clock ────────────────────────────────────── */
-const timeEl = document.getElementById('live-time');
-const tick = () => {
-  const now = new Date();
-  timeEl.textContent = now.toUTCString().slice(17, 25) + ' UTC';
-};
-tick(); setInterval(tick, 1000);
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+camera.position.z = 5;
 
-/* ── Custom Cursor ─────────────────────────────────── */
-const ring = document.getElementById('cursor-ring');
-const dot  = document.getElementById('cursor-dot');
-let mx = -200, my = -200, rx = -200, ry = -200;
-let trailPool = [], maxTrails = 18;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
 
-for (let i = 0; i < maxTrails; i++) {
-  const t = document.createElement('div');
-  t.className = 'trail';
-  document.body.appendChild(t);
-  trailPool.push({ el: t, x: -200, y: -200, life: 0 });
+/* LIGHT */
+const light1 = new THREE.PointLight(0x7dd3fc, 2);
+light1.position.set(5,5,5);
+scene.add(light1);
+
+const light2 = new THREE.PointLight(0x1d4ed8, 2);
+light2.position.set(-5,-5,-5);
+scene.add(light2);
+
+/* CORE BLOB */
+const geo = new THREE.IcosahedronGeometry(1.6, 64);
+
+const mat = new THREE.MeshPhysicalMaterial({
+  color: 0x60a5fa,
+  roughness: 0.1,
+  metalness: 0.3,
+  transmission: 0.4,
+  thickness: 0.8,
+  clearcoat: 1
+});
+
+const blob = new THREE.Mesh(geo, mat);
+scene.add(blob);
+
+/* VERTEX MORPH */
+const pos = geo.attributes.position;
+const original = pos.array.slice();
+
+function animateBlob(t) {
+  for (let i = 0; i < pos.count; i++) {
+    let ix = i * 3;
+
+    let x = original[ix];
+    let y = original[ix+1];
+    let z = original[ix+2];
+
+    let noise =
+      Math.sin(t + x*3) +
+      Math.sin(t + y*3) +
+      Math.sin(t + z*3);
+
+    noise *= 0.08;
+
+    pos.array[ix] = x + noise;
+    pos.array[ix+1] = y + noise;
+    pos.array[ix+2] = z + noise;
+  }
+
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
 }
 
-let trailHistory = [];
+/* PARTICLES */
+const starsGeo = new THREE.BufferGeometry();
+const starCount = 2000;
+const arr = new Float32Array(starCount * 3);
 
-document.addEventListener('mousemove', e => {
-  mx = e.clientX; my = e.clientY;
-  dot.style.left = mx + 'px';
-  dot.style.top  = my + 'px';
-  trailHistory.unshift({ x: mx, y: my });
-  if (trailHistory.length > maxTrails) trailHistory.length = maxTrails;
+for (let i = 0; i < starCount * 3; i++) {
+  arr[i] = (Math.random() - 0.5) * 20;
+}
+
+starsGeo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+
+const starsMat = new THREE.PointsMaterial({
+  color: 0x7dd3fc,
+  size: 0.015,
+  transparent: true,
+  opacity: 0.6
 });
 
-document.querySelectorAll('a, button, [role="button"]').forEach(el => {
-  el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
-  el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+const stars = new THREE.Points(starsGeo, starsMat);
+scene.add(stars);
+
+/* INTERACTION */
+let mx = 0, my = 0;
+
+document.addEventListener("mousemove", e => {
+  mx = (e.clientX / innerWidth - 0.5) * 2;
+  my = (e.clientY / innerHeight - 0.5) * 2;
 });
 
-const animCursor = () => {
-  rx = lerp(rx, mx, 0.12);
-  ry = lerp(ry, my, 0.12);
-  ring.style.left = rx + 'px';
-  ring.style.top  = ry + 'px';
+/* LOOP */
+function animate(t) {
+  requestAnimationFrame(animate);
 
-  trailPool.forEach((t, i) => {
-    const pos = trailHistory[i + 2];
-    if (!pos) return;
-    const scale = 1 - i / maxTrails;
-    const alpha = (1 - i / maxTrails) * 0.5;
-    t.el.style.left    = pos.x + 'px';
-    t.el.style.top     = pos.y + 'px';
-    t.el.style.opacity = alpha;
-    t.el.style.transform = `translate(-50%,-50%) scale(${scale})`;
-    t.el.style.background = i < maxTrails / 2 ? 'var(--blue)' : 'var(--orange)';
-  });
+  animateBlob(t * 0.001);
 
-  requestAnimationFrame(animCursor);
-};
-animCursor();
+  blob.rotation.y += 0.002;
+  blob.rotation.x += 0.001;
 
-/* ── 3D Card Tilt ──────────────────────────────────── */
-const card = document.getElementById('card');
-let cx = window.innerWidth  / 2;
-let cy = window.innerHeight / 2;
+  camera.position.x += (mx * 1.5 - camera.position.x) * 0.05;
+  camera.position.y += (-my * 1.5 - camera.position.y) * 0.05;
+  camera.lookAt(scene.position);
 
-document.addEventListener('mousemove', e => {
-  const rect = card.getBoundingClientRect();
-  const ccx  = rect.left + rect.width  / 2;
-  const ccy  = rect.top  + rect.height / 2;
-  const dx   = (e.clientX - ccx) / window.innerWidth;
-  const dy   = (e.clientY - ccy) / window.innerHeight;
-  const maxT = 6;
-  card.style.transform = `perspective(1200px) rotateY(${dx * maxT}deg) rotateX(${-dy * maxT}deg)`;
-});
+  stars.rotation.y += 0.0004;
 
-document.addEventListener('mouseleave', () => {
-  card.style.transform = 'perspective(1200px) rotateY(0deg) rotateX(0deg)';
-});
+  renderer.render(scene, camera);
+}
 
-/* ── Button Magnetic Effect ────────────────────────── */
-document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
-  btn.addEventListener('mousemove', e => {
-    const r = btn.getBoundingClientRect();
-    const bx = e.clientX - (r.left + r.width  / 2);
-    const by = e.clientY - (r.top  + r.height / 2);
-    btn.style.transform = `translateY(-3px) scale(1.02) translate(${bx * 0.12}px, ${by * 0.12}px)`;
-  });
-  btn.addEventListener('mouseleave', () => {
-    btn.style.transform = '';
-  });
-});
+animate();
 
-/* ── CSS Floating Particles ─────────────────────────── */
-const makeParticle = () => {
-  const p  = document.createElement('div');
-  p.className = 'particle';
-  const sz = Math.random() * 3 + 1;
-  const blue = Math.random() > 0.4;
-  p.style.cssText = `
-    width:${sz}px; height:${sz}px;
-    left:${Math.random() * 100}vw;
-    bottom:-10px;
-    background:${blue ? 'rgba(0,200,255,0.6)' : 'rgba(255,107,43,0.5)'};
-    box-shadow: 0 0 ${sz * 4}px ${blue ? 'rgba(0,200,255,0.5)' : 'rgba(255,107,43,0.4)'};
-    animation-duration:${Math.random() * 8 + 6}s;
-    animation-delay:${Math.random() * 4}s;
-  `;
-  document.body.appendChild(p);
-  p.addEventListener('animationend', () => p.remove());
-};
-setInterval(makeParticle, 400);
-
-/* ── Three.js Background ───────────────────────────── */
-(() => {
-  const canvas   = document.getElementById('bg-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+/* RESIZE */
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setClearColor(0x000000, 0);
+});
 
-  const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-  camera.position.z = 5;
+/* REDIRECT */
+let t = 15;
+const el = document.getElementById("t");
 
-  // Ambient
-  scene.add(new THREE.AmbientLight(0x001133, 1));
-  const pt = new THREE.PointLight(0x00C8FF, 2, 20);
-  pt.position.set(2, 3, 4);
-  scene.add(pt);
-  const pt2 = new THREE.PointLight(0xFF6B2B, 1.5, 20);
-  pt2.position.set(-3, -2, 3);
-  scene.add(pt2);
-
-  // ── Grid plane ──────────────────────────────────────
-  const gridGeo = new THREE.PlaneGeometry(30, 30, 40, 40);
-  const gridMat = new THREE.MeshBasicMaterial({
-    color: 0x00C8FF,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.04,
-  });
-  const grid = new THREE.Mesh(gridGeo, gridMat);
-  grid.rotation.x = -Math.PI / 3;
-  grid.position.y = -3;
-  scene.add(grid);
-
-  // ── Floating spheres (nodes) ─────────────────────────
-  const nodeGeo = new THREE.SphereGeometry(0.08, 12, 12);
-  const nodes = [];
-  for (let i = 0; i < 60; i++) {
-    const isBlue = Math.random() > 0.4;
-    const mat = new THREE.MeshStandardMaterial({
-      color:     isBlue ? 0x00C8FF : 0xFF6B2B,
-      emissive:  isBlue ? 0x005577 : 0x772200,
-      emissiveIntensity: 1,
-      transparent: true,
-      opacity: 0.6 + Math.random() * 0.4,
-    });
-    const mesh = new THREE.Mesh(nodeGeo, mat);
-    mesh.position.set(
-      (Math.random() - 0.5) * 14,
-      (Math.random() - 0.5) * 10,
-      (Math.random() - 0.5) * 8 - 2
-    );
-    mesh.userData = {
-      ox: mesh.position.x, oy: mesh.position.y, oz: mesh.position.z,
-      sp: Math.random() * 0.5 + 0.1,
-      ph: Math.random() * Math.PI * 2,
-      ax: (Math.random() - 0.5) * 0.3,
-      ay: (Math.random() - 0.5) * 0.3,
-    };
-    nodes.push(mesh);
-    scene.add(mesh);
-  }
-
-  // ── Wire rings ─────────────────────────────────────
-  const rings = [];
-  for (let i = 0; i < 5; i++) {
-    const r = 0.4 + Math.random() * 1.2;
-    const geo = new THREE.TorusGeometry(r, 0.008, 8, 64);
-    const mat = new THREE.MeshBasicMaterial({
-      color: Math.random() > 0.5 ? 0x00C8FF : 0xFF6B2B,
-      transparent: true,
-      opacity: 0.15 + Math.random() * 0.2,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(
-      (Math.random() - 0.5) * 10,
-      (Math.random() - 0.5) * 6,
-      (Math.random() - 0.5) * 4 - 2
-    );
-    mesh.rotation.set(Math.random(), Math.random(), Math.random());
-    mesh.userData.sp = Math.random() * 0.3 + 0.05;
-    mesh.userData.ax = (Math.random() - 0.5) * 0.3;
-    mesh.userData.ay = (Math.random() - 0.5) * 0.3;
-    mesh.userData.az = (Math.random() - 0.5) * 0.3;
-    rings.push(mesh);
-    scene.add(mesh);
-  }
-
-  // ── Icosahedron ────────────────────────────────────
-  const icoGeo = new THREE.IcosahedronGeometry(0.8, 1);
-  const icoMat = new THREE.MeshStandardMaterial({
-    color: 0x00C8FF,
-    emissive: 0x003355,
-    emissiveIntensity: 0.8,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.18,
-  });
-  const ico = new THREE.Mesh(icoGeo, icoMat);
-  ico.position.set(3.5, -1.5, -1);
-  scene.add(ico);
-
-  const icoGeo2 = new THREE.OctahedronGeometry(0.6, 0);
-  const icoMat2 = new THREE.MeshStandardMaterial({
-    color: 0xFF6B2B,
-    emissive: 0x551100,
-    emissiveIntensity: 0.8,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.18,
-  });
-  const ico2 = new THREE.Mesh(icoGeo2, icoMat2);
-  ico2.position.set(-4, 2, -2);
-  scene.add(ico2);
-
-  // ── Lines between nodes ─────────────────────────────
-  const lineMat = new THREE.LineBasicMaterial({ color: 0x00C8FF, transparent: true, opacity: 0.06 });
-  const lineGroup = new THREE.Group();
-  const nearPairs = [];
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      if (nodes[i].position.distanceTo(nodes[j].position) < 3.5) {
-        nearPairs.push([i, j]);
-      }
-    }
-  }
-  nearPairs.slice(0, 80).forEach(([a, b]) => {
-    const pts = [nodes[a].position, nodes[b].position];
-    const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    lineGroup.add(new THREE.Line(geo, lineMat));
-  });
-  scene.add(lineGroup);
-
-  // ── Mouse influence ─────────────────────────────────
-  let mxN = 0, myN = 0, tmxN = 0, tmyN = 0;
-  document.addEventListener('mousemove', e => {
-    tmxN = (e.clientX / innerWidth  - 0.5) * 2;
-    tmyN = (e.clientY / innerHeight - 0.5) * 2;
-  });
-
-  // ── Resize ──────────────────────────────────────────
-  window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-  });
-
-  // ── Touch parallax (mobile) ──────────────────────────
-  window.addEventListener('deviceorientation', e => {
-    if (e.beta !== null) {
-      tmxN = (e.gamma / 45) * 0.5;
-      tmyN = (e.beta  / 90 - 0.5) * 0.5;
-    }
-  });
-
-  // ── Animate ─────────────────────────────────────────
-  const clock = new THREE.Clock();
-  const animLoop = () => {
-    requestAnimationFrame(animLoop);
-    const t = clock.getElapsedTime();
-
-    mxN = lerp(mxN, tmxN, 0.04);
-    myN = lerp(myN, tmyN, 0.04);
-
-    camera.position.x = mxN * 0.6;
-    camera.position.y = -myN * 0.4;
-    camera.lookAt(0, 0, 0);
-
-    // Nodes float
-    nodes.forEach(n => {
-      const d = n.userData;
-      n.position.x = d.ox + Math.sin(t * d.sp + d.ph) * d.ax * 2;
-      n.position.y = d.oy + Math.cos(t * d.sp + d.ph) * d.ay * 2;
-    });
-
-    // Rings rotate
-    rings.forEach(r => {
-      r.rotation.x += r.userData.ax * 0.008;
-      r.rotation.y += r.userData.ay * 0.008;
-      r.rotation.z += r.userData.az * 0.008;
-    });
-
-    // Update lines
-    let li = 0;
-    lineGroup.children.forEach(line => {
-      if (li < nearPairs.length) {
-        const [a, b] = nearPairs[li++];
-        const pos = line.geometry.attributes.position.array;
-        pos[0] = nodes[a].position.x; pos[1] = nodes[a].position.y; pos[2] = nodes[a].position.z;
-        pos[3] = nodes[b].position.x; pos[4] = nodes[b].position.y; pos[5] = nodes[b].position.z;
-        line.geometry.attributes.position.needsUpdate = true;
-      }
-    });
-
-    // Wireframes rotate
-    ico.rotation.y  = t * 0.18;
-    ico.rotation.x  = Math.sin(t * 0.12) * 0.3;
-    ico2.rotation.y = -t * 0.14;
-    ico2.rotation.z = Math.cos(t * 0.1) * 0.2;
-
-    // Grid undulate
-    grid.position.z = Math.sin(t * 0.2) * 0.2;
-    grid.rotation.z = t * 0.01;
-
-    // Point lights orbit
-    pt.position.x  = Math.sin(t * 0.4) * 4;
-    pt.position.y  = Math.cos(t * 0.3) * 3;
-    pt2.position.x = Math.cos(t * 0.35) * 5;
-    pt2.position.y = Math.sin(t * 0.28) * 3;
-
-    renderer.render(scene, camera);
-  };
-  animLoop();
-})();
-
-/* ── Auto-redirect (30s) ────────────────────────────── */
-let countdown = 30;
-const badge = document.querySelector('.bottom-badge');
-const timer = setInterval(() => {
-  countdown--;
-  if (countdown <= 0) {
-    clearInterval(timer);
-    window.location.href = 'https://circlelytics.com';
-  } else if (countdown <= 10) {
-    badge.innerHTML = `Auto-redirecting in <span>${countdown}s</span> → <span>circlelytics.com</span>`;
-  }
-}, 1000);
+setInterval(() => {
+  t--;
+  el.textContent = t;
+  if (t <= 0) location.href = "https://circlelytics.com";
+}, 1500);
 </script>
+
 </body>
 </html>
